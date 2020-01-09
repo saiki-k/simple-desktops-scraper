@@ -15,7 +15,7 @@ npm install
 npm run start
 ```
 
-- You can run `npm run start` as many times as you wish (either in case of errors, or downloads that stop midway). Wallpapers which have already been downloaded, won't be downloaded again. "Good, scraper!" 🐶 
+- You can run `npm run start` as many times as you wish (either in case of errors, or downloads that stop midway). Wallpapers which have already been downloaded, won't be downloaded again.
 
 
 ## 	Please...
