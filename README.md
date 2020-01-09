@@ -7,9 +7,9 @@ Hence, this scraper!
 
 
 ## How to...
-- Please ensure that NodeJS is installed
+- Please ensure that NodeJS is installed on your computer.
 
-- Run the following commands to start downloading the wallpaers
+- Run the following commands to start downloading the wallpapers.
 ```
 npm install
 npm run start
@@ -19,4 +19,4 @@ npm run start
 
 
 ## 	Please...
-Be a good netizen, and do use the scraped data for absolutely personal purposes only! [Use of these desktop wallpapers is for personal use only, and shouldn't be sold or reposted without the expressed written consent of the desktop creator.](http://simpledesktops.com/about/)
+Be a good netizen, and do use the scraped data for absolutely-personal purposes only! [Use of these desktop wallpapers is for personal use only, and shouldn't be sold or reposted without the expressed written consent of the desktop creator.](http://simpledesktops.com/about/)
