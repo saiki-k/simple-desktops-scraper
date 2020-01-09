@@ -29,19 +29,29 @@ const scrapeCollectionPage = async (pageNo) => {
 			if (ele.name === 'a') {
 				wallObj = {}; // Start of a new wall data
 				const wallPageURL = `${BASE_URL}${$(ele).attr('href')}`;
-				const urlParts = wallPageURL.split('/');
-				const timeStamp = `${urlParts[5]}-${urlParts[6]}-${urlParts[7]}`;
 				const thumbURL = $(ele).find('img').attr('src');
 				const wallTitle = $(ele).find('img').attr('title');
+				
+				const probWallURL = thumbURL.split('.295x184')[0];
+				const wallURLParts = probWallURL.split('/');
+				
+				const timestamp = `${wallURLParts[5]}-${wallURLParts[6]}-${wallURLParts[7]}`;
+				
+				const wallOriginalFileName = wallURLParts[8];
+				const wallOriginalFileNameParts = wallOriginalFileName.split('.')
+				const isExtPresent = wallOriginalFileNameParts.length > 1;
+				const wallExt = isExtPresent ? '.' + wallOriginalFileNameParts.pop() : '';
+				
 
 				wallObj = Object.assign({}, wallObj, {
 					wallPageURL,
-					timeStamp,
+					timestamp,
 					thumbURL,
-					probWallURL: `${thumbURL.split('.png')[0]}.png`,
+					probWallURL,
 					wallTitle,
-					wallFileName: `${timeStamp} - ${sanitize(wallTitle)}`,
-					wallAltTitle: $(ele).find('img').attr('alt'),
+					wallOriginalFileName,
+					wallExt,
+					wallFileName: `${timestamp} - ${sanitize(wallTitle)}`,
 				});
 			}
 			if (ele.name === 'span') {
@@ -67,7 +77,20 @@ const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
 		pagePromises.push(scrapeCollectionPage(i));
 	}
 	const wallsArr = await Promise.all(pagePromises);
-	const wallsMeta = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
+	const walls = wallsArr
+		.reduce((acc, curr) => acc.concat(curr), [])
+		.sort((wallA, wallB) => {
+			const [yearA, monthA, dayA] = wallA.timestamp.split('-');
+			const dateA = new Date(
+				parseInt(yearA, 10), parseInt(monthA, 10), parseInt(dayA, 10)
+			);
+			const [yearB, monthB, dayB] = wallB.timestamp.split('-');
+			const dateB = new Date(
+				parseInt(yearB, 10), parseInt(monthB, 10), parseInt(dayB, 10)
+			);
+			return dateB - dateA;
+		});
+	const wallsMeta = { latest: walls[0].timestamp, walls }
 
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
 };
@@ -77,19 +100,24 @@ const downloadWalls = async () => {
 		await scrapeCollectionPagesAndDownloadMeta(TOTAL_COLLECTION_PAGES);
 	}
 	
-	const wallsData = JSON.parse(fs.readFileSync(META_PATH));
-	const noOfWalls = wallsData.length;
+	const wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
+	const { walls } = wallsMeta;
+	const noOfWalls = walls.length;
 
 	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
 		fs.mkdirSync(DOWNLOADS_FOLDER);
 	}
 	
-	console.log(`${wallsData.length} wallpaper(s) available...`);
-	console.log(`${fs.readdirSync(DOWNLOADS_FOLDER).length} wallpaper(s) have been downloaded...`)
+	const downloadedNoOfWalls = fs.readdirSync(DOWNLOADS_FOLDER).length;
+	const remainingNoOfDownloads = noOfWalls - downloadedNoOfWalls;
+	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have been downloaded.`);
+	if (remainingNoOfDownloads >= 1) {
+		console.log(`Downloading the remaining ${remainingNoOfDownloads}...`)
+	}
 	
 	for (let i = 0; i < noOfWalls; i++) {
-		const wall = wallsData[i];
-		const wallPath = getWallPath(wall.wallFileName);
+		const wall = walls[i];
+		const wallPath = getWallPath(wall.wallFileName, wall.wallExt);
 
 		if (!fs.existsSync(wallPath)) {
 			const options = { url: wall.probWallURL, dest: wallPath };
