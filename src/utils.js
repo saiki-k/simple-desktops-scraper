@@ -8,4 +8,18 @@ const getWallPath = (fileName, wallExt) => path.join(
 	`${fileName}${wallExt ? wallExt.toLowerCase() : '.png'}`
 );
 
-module.exports = { getNthPageURL, getWallPath };
+const getDateObjFromTimestamp = timestamp => {
+	const [year, month, day] = timestamp.split('-');
+	return new Date(
+		parseInt(year, 10), parseInt(month, 10), parseInt(day, 10)
+	);
+};
+const sortWallsByTimestamp = (wallA, wallB) =>
+	getDateObjFromTimestamp(wallB.timestamp) - getDateObjFromTimestamp(wallA.timestamp);
+
+module.exports = {
+	getNthPageURL,
+	getWallPath,
+	getDateObjFromTimestamp,
+	sortWallsByTimestamp
+};

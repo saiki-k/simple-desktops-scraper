@@ -4,7 +4,12 @@ const cheerio = require('cheerio');
 const sanitize = require("sanitize-filename");
 const download = require("image-downloader");
 
-const { getNthPageURL, getWallPath } = require('./utils.js');
+const {
+	getNthPageURL,
+	getWallPath,
+	getDateObjFromTimestamp,
+	sortWallsByTimestamp
+} = require('./utils.js');
 const {
 	BASE_URL,
 	TOTAL_COLLECTION_PAGES,
@@ -15,7 +20,13 @@ const {
 
 const scrapeCollectionPage = async (pageNo) => {
 	const pageURL = getNthPageURL(pageNo);
-	const response = await axios(pageURL);
+	let response = { data: '' };
+	try {
+		response = await axios(pageURL);
+	} catch (e) {
+		console.log(e);
+		return;
+	}
 	const html = response.data;
 
 	const $ = cheerio.load(html);
@@ -64,7 +75,7 @@ const scrapeCollectionPage = async (pageNo) => {
 		}
 	});
 
-	return walls;
+	return walls.sort(sortWallsByTimestamp);
 };
 
 const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
@@ -76,30 +87,72 @@ const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
 	for (let i = 1; i <= noOfPages; i++) {
 		pagePromises.push(scrapeCollectionPage(i));
 	}
-	const wallsArr = await Promise.all(pagePromises);
+
+	let wallsArr = [];
+	try {
+		wallsArr = await Promise.all(pagePromises);
+	} catch (e) {
+		console.log(e);
+		return;
+	}
 	const walls = wallsArr
 		.reduce((acc, curr) => acc.concat(curr), [])
-		.sort((wallA, wallB) => {
-			const [yearA, monthA, dayA] = wallA.timestamp.split('-');
-			const dateA = new Date(
-				parseInt(yearA, 10), parseInt(monthA, 10), parseInt(dayA, 10)
-			);
-			const [yearB, monthB, dayB] = wallB.timestamp.split('-');
-			const dateB = new Date(
-				parseInt(yearB, 10), parseInt(monthB, 10), parseInt(dayB, 10)
-			);
-			return dateB - dateA;
-		});
+		.sort(sortWallsByTimestamp);
 	const wallsMeta = { latest: walls[0].timestamp, walls }
+	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
+};
+
+const scrapeCollectionPagesAndUpdateMeta = async () => {
+	let wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
+	let { walls } = wallsMeta;
+	let pageWalls = []
+	console.log("Checking for updates...")
+	for (let i = 1; i <= TOTAL_COLLECTION_PAGES; i++) {
+		try {
+			pageWalls = await scrapeCollectionPage(i);
+		} catch (e) {
+			console.log(e);
+			return walls;
+		}
+		const filteredPageWalls = pageWalls.filter(wall => {
+			const wallDateObj = getDateObjFromTimestamp(wall.timestamp);
+			const wallsMetaLatestDateObj = getDateObjFromTimestamp(wallsMeta.latest);
+			
+			return (
+				wallDateObj > wallsMetaLatestDateObj
+			) || (
+				wallDateObj.getTime() === wallsMetaLatestDateObj.getTime() &&
+				!fs.existsSync(getWallPath(wall.wallFileName, wall.wallExt))
+			);
+		});
+		if (filteredPageWalls.length < 1) { // No latest walls in this page
+			console.log(`Stopping update check on page ${i} as no new wallpapers have been found in this page...\n`)
+			return;
+		}
+		walls = walls.concat(filteredPageWalls);
+		if (filteredPageWalls.length < pageWalls.length) { // Only some latest walls in this page
+			console.log(`Stopping update check on page ${i} as only ${filteredPageWalls.length} out of ${pageWalls.length} wallpapers are new...\n`)
+			break;
+		}
+	}
+	walls = walls.sort(sortWallsByTimestamp);
+	wallsMeta = { latest: walls[0].timestamp, walls }
 
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
 };
 
-const downloadWalls = async () => {
-	if (!fs.existsSync(META_PATH)) {
-		await scrapeCollectionPagesAndDownloadMeta(TOTAL_COLLECTION_PAGES);
+const downloadWalls = async (opts) => {
+	try {
+		if (!fs.existsSync(META_PATH)) {
+			await scrapeCollectionPagesAndDownloadMeta(TOTAL_COLLECTION_PAGES);
+		} else if (opts.checkForUpdates) {
+			await scrapeCollectionPagesAndUpdateMeta();
+		}
+	} catch (e) {
+		console.log(e);
+		return;
 	}
-	
+
 	const wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
 	const { walls } = wallsMeta;
 	const noOfWalls = walls.length;
@@ -112,7 +165,7 @@ const downloadWalls = async () => {
 	const remainingNoOfDownloads = noOfWalls - downloadedNoOfWalls;
 	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have been downloaded.`);
 	if (remainingNoOfDownloads >= 1) {
-		console.log(`Downloading the remaining ${remainingNoOfDownloads}...`)
+		console.log(`Downloading the remaining ${remainingNoOfDownloads}...\n`)
 	}
 	
 	for (let i = 0; i < noOfWalls; i++) {
@@ -129,6 +182,6 @@ const downloadWalls = async () => {
 				.catch(err => console.error(err));
 		}
 	}
-}
+};
 
 module.exports = { downloadWalls };

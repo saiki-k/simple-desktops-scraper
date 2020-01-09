@@ -1,3 +1,3 @@
 const { downloadWalls } = require('./src/scrapers.js');
 
-downloadWalls();
+downloadWalls({ checkForUpdates: true });
