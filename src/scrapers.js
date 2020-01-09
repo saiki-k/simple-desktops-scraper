@@ -57,23 +57,17 @@ const scrapeCollectionPage = async (pageNo) => {
 	return walls;
 };
 
-const scrapeCollectionPagesAndDownloadMeta = async (noOfPages, startPage = 1, concat = false) => {
+const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
 	if (!fs.existsSync(DATA_FOLDER)) {
 		fs.mkdirSync(DATA_FOLDER);
 	}
-
-	const oldWallsMeta = concat && fs.existsSync(META_PATH)
-		? JSON.parse(fs.readFileSync(META_PATH) || [])
-		: [];
 	
 	const pagePromises = [];
-	for (let i = startPage; i < startPage + noOfPages; i++) {
+	for (let i = 1; i <= noOfPages; i++) {
 		pagePromises.push(scrapeCollectionPage(i));
 	}
 	const wallsArr = await Promise.all(pagePromises);
-
-	const newWallsMeta = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
-	const wallsMeta = oldWallsMeta.concat(newWallsMeta);
+	const wallsMeta = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
 
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta));
 };
@@ -102,7 +96,7 @@ const downloadWalls = async () => {
 			download
 				.image(options)
 				.then(({ filename, image }) => {
-					console.log(i, "Saved to", filename);
+					console.log("Saved to", filename);
 				})
 				.catch(err => console.error(err));
 		}
