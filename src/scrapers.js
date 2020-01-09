@@ -103,4 +103,4 @@ const downloadWalls = async () => {
 	}
 }
 
-downloadWalls();
+module.exports = { downloadWalls };

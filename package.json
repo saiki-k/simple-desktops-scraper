@@ -1,18 +1,23 @@
 {
-  "name": "simple-desktops-scraper",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "Sai Kishore Komanduri <saikishore.bits@gmail.com>",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^0.18.0",
-    "cheerio": "^1.0.0-rc.2",
-    "image-downloader": "^3.5.0",
-    "sanitize-filename": "^1.6.3"
-  }
+	"name": "simple-desktops-scraper",
+	"version": "0.0.1",
+	"description": "A simple scraper for downloading all the chic wallpapers from http://simpledesktops.com",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node index.js"
+	},
+	"keywords": [],
+	"author": "Sai Kishore Komanduri <saikishore.bits@gmail.com>",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/fatman-/simple-desktops-scraper"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"axios": "^0.19.1",
+		"cheerio": "^1.0.0-rc.3",
+		"image-downloader": "^3.5.0",
+		"sanitize-filename": "^1.6.3"
+	}
 }
