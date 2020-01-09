@@ -1,5 +1,5 @@
 ## What...
-Go visit http://simpledesktops.com ! They've - arguably - the best collection of minimal, beautiful, abstract art-esque wallpapers! I absolutely adore the official [Simple Desktops for Mac](http://simpledesktops.com/app/mac/) app; which cycles through the humongous collection of 1400+ of such aforementioned wallpapers as per a set frequency.
+Go visit http://simpledesktops.com ! They've - arguably - the best collection of minimal, beautiful, abstract art-esque wallpapers! I absolutely adore the official [Simple Desktops for Mac](http://simpledesktops.com/app/mac/) app; which cycles through a humongous collection of 1400+ such aforementioned wallpapers, at a set frequency.
 
 When one of my friends was visibly quite bummed at the lack of something similar for Windows; we thought it best to scrape all the wallpapers and have the stock Windows wallpaper manager manage these!
 
