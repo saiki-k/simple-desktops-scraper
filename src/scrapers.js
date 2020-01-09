@@ -127,7 +127,7 @@ const scrapeCollectionPagesAndUpdateMeta = async () => {
 		});
 		if (filteredPageWalls.length < 1) { // No latest walls in this page
 			console.log(`Stopping update check on page ${i} as no new wallpapers have been found in this page...\n`)
-			return;
+			break;
 		}
 		walls = walls.concat(filteredPageWalls);
 		if (filteredPageWalls.length < pageWalls.length) { // Only some latest walls in this page
