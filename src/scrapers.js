@@ -1,40 +1,20 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+
 const fs = require('fs');
+const path = require('path');
+
 const download = require("image-downloader");
 const sanitize = require("sanitize-filename");
 
 const { getPageN } = require('./utils.js');
 const { BASE_URL, MAX_COLLECTION_PAGES } = require('./constants.js');
 
-const scrapeWallPage = async (wallPageURL) => {
-	const response = await axios(wallPageURL);
-	const html = response.data;
-
-	const $ = cheerio.load(html);
-	let wallObj = {};
-	
-	$("div.desktop")
-		.contents()
-		.each((idx, ele) => {
-			const html = $(ele).html();
-			if (html) {
-				if (ele.name === 'a') {
-					// Start of the wall data
-					wallObj = { bigThumbURL: $(ele).find('img').attr('src') };
-				}
-				if (ele.name === 'h2') {
-					const downloadURL = `${BASE_URL}${$(ele).find('a').attr('href')}`;
-					const wallID = downloadURL.split('=')[1];
-					wallObj = Object.assign({}, wallObj, { downloadURL, wallID });
-					return; // End of the wall data
-				}
-			}
-		});
-	
-	// console.log(wallObj);
-	return wallObj;
-}
+// TODO: Move the following to constants.js, and utils.js; resp...
+const DATA_FOLDER = path.join('..', 'data');
+const DOWNLOADS_FOLDER = path.join(DATA_FOLDER, 'simple_desktops');
+const META_PATH = path.join(DATA_FOLDER, 'meta.json');
+const getWallPath = (fileName) => `../data/simple_desktops/${sanitize(fileName)}.png`
 
 const scrapeCollectionPage = async (pageNo) => {
 	const pageURL = getPageN(pageNo);
@@ -55,13 +35,15 @@ const scrapeCollectionPage = async (pageNo) => {
 				const urlParts = wallPageURL.split('/');
 				const timeStamp = `${urlParts[5]}-${urlParts[6]}-${urlParts[7]}`;
 				const thumbURL = $(ele).find('img').attr('src');
+				const wallTitle = $(ele).find('img').attr('title');
 
 				wallObj = Object.assign({}, wallObj, {
 					wallPageURL,
 					timeStamp,
 					thumbURL,
 					probWallURL: `${thumbURL.split('.png')[0]}.png`,
-					wallTitle: $(ele).find('img').attr('title'),
+					wallTitle,
+					wallFileName: `${timeStamp} - ${sanitize(wallTitle)}`,
 					wallAltTitle: $(ele).find('img').attr('alt'),
 				});
 			}
@@ -74,58 +56,47 @@ const scrapeCollectionPage = async (pageNo) => {
 			}
 		}
 	});
-	const wallPagePromises = walls.map(wall => scrapeWallPage(wall.wallPageURL));
-	const wallPageData = await Promise.all(wallPagePromises);
-	
-	const wallsWithWallPageData = walls.map((wall, idx) => Object.assign(
-		{}, wall, wallPageData[idx]
-	));
-	
-	// console.log(wallsWithWallPageData.sort((wallA, wallB) => parseInt(wallA.wallID, 10) - parseInt(wallB.wallID, 10)));	
-	return wallsWithWallPageData
-		.sort((wallA, wallB) => parseInt(wallA.wallID, 10) - parseInt(wallB.wallID, 10));
+
+	return walls;
 };
 
-const scrapeCollectionPages = async (noOfPages, startPage = 1) => {
+const scrapeCollectionPagesAndDownloadMeta = async (noOfPages, startPage = 1, concat = true) => {
+	const oldWallsMeta = concat && fs.existsSync(META_PATH)
+		? JSON.parse(fs.readFileSync(META_PATH) || [])
+		: [];
+	
 	const pagePromises = [];
 	for (let i = startPage; i < startPage + noOfPages; i++) {
 		pagePromises.push(scrapeCollectionPage(i));
 	}
 	const wallsArr = await Promise.all(pagePromises);
-	const walls = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
-	// console.log(walls, walls.length);
-	return walls;
+
+	const newWallsMeta = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
+	const wallsMeta = oldWallsMeta.concat(newWallsMeta);
+
+	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta));
 };
 
-// TODO: Needs a better implementation...
-const downloadInfo = async (noOfPages, startPage = 1, concat = true) => {
-	let wallsData = concat
-		? JSON.parse(fs.readFileSync('../data/simple-desktops.json') || [])
-		: [];
-	const newData = await scrapeCollectionPages(noOfPages, startPage);
-	const newDataPlusOldData = wallsData.concat(newData);
-
-	console.log({ newDataLength: newData.length, combinedLength: newDataPlusOldData.length });
-	fs.writeFileSync(
-		'../data/simple-desktops.json',
-		JSON.stringify(wallsData.concat(newData))
-	);
-}
-
-const downloadWalls = async (noOfWalls, startWall = 0) => {
-	const wallsData = JSON.parse(fs.readFileSync('../data/simple-desktops.json'));
-	console.log(wallsData.length);
-	for (let i = startWall; i < startWall + noOfWalls; i++) {
+const downloadWalls = async (noOfWalls, startWall = 1, downloadMeta = false) => {
+	if (downloadMeta) {
+		// TODO: Replace the magic number with a constant
+		await scrapeCollectionPagesAndDownloadMeta(51);
+	}
+	
+	const wallsData = JSON.parse(fs.readFileSync(META_PATH));
+	console.log("Total downloads to be done:", wallsData.length);
+	
+	const zeroIdx = startWall - 1;
+	for (let i = zeroIdx; i < zeroIdx + noOfWalls; i++) {
 		const wall = wallsData[i];
-		const dest = `../data/simple_desktops/(${wall.wallID}) ${sanitize(wall.wallTitle)}.png`;
+		const dest = getWallPath(wall.wallFileName);
 		const options = {
 			url: wall.probWallURL,
 			dest
 		};
 
 		fs.access(dest, fs.F_OK, (err) => {
-			if (!err) {
-				// file exists
+			if (!err) { // File exists
 				return;
 			}
 			download
@@ -135,13 +106,15 @@ const downloadWalls = async (noOfWalls, startWall = 0) => {
 				})
 				.catch(err => console.error(err));
 		});
-		
 	}
-
 }
 
-downloadWalls(1413);
-// downloadInfo(1, 51);
-// scrapeWallPage('http://simpledesktops.com/browse/desktops/2016/jul/24/modern-labyrinth/');
-// scrapeCollectionPages(2);
-// scrapeCollectionPage(52);
+if (!fs.existsSync(DATA_FOLDER)){
+	fs.mkdirSync(DATA_FOLDER);
+	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
+		fs.mkdirSync(DOWNLOADS_FOLDER);
+	}
+}
+
+// TODO: Replace the magic number with a constant
+downloadWalls(1413, 1, true);
