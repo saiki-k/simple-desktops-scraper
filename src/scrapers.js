@@ -69,7 +69,7 @@ const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
 	const wallsArr = await Promise.all(pagePromises);
 	const wallsMeta = wallsArr.reduce((acc, curr) => acc.concat(curr), []);
 
-	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta));
+	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
 };
 
 const downloadWalls = async () => {
