@@ -1,23 +1,20 @@
+const fs = require('fs');
 const axios = require('axios');
 const cheerio = require('cheerio');
-
-const fs = require('fs');
-const path = require('path');
-
-const download = require("image-downloader");
 const sanitize = require("sanitize-filename");
+const download = require("image-downloader");
 
-const { getPageN } = require('./utils.js');
-const { BASE_URL, MAX_COLLECTION_PAGES } = require('./constants.js');
-
-// TODO: Move the following to constants.js, and utils.js; resp...
-const DATA_FOLDER = path.join('..', 'data');
-const DOWNLOADS_FOLDER = path.join(DATA_FOLDER, 'simple_desktops');
-const META_PATH = path.join(DATA_FOLDER, 'meta.json');
-const getWallPath = (fileName) => `../data/simple_desktops/${sanitize(fileName)}.png`
+const { getNthPageURL, getWallPath } = require('./utils.js');
+const {
+	BASE_URL,
+	TOTAL_COLLECTION_PAGES,
+	DATA_FOLDER,
+	DOWNLOADS_FOLDER,
+	META_PATH
+} = require('./constants.js');
 
 const scrapeCollectionPage = async (pageNo) => {
-	const pageURL = getPageN(pageNo);
+	const pageURL = getNthPageURL(pageNo);
 	const response = await axios(pageURL);
 	const html = response.data;
 
@@ -60,7 +57,11 @@ const scrapeCollectionPage = async (pageNo) => {
 	return walls;
 };
 
-const scrapeCollectionPagesAndDownloadMeta = async (noOfPages, startPage = 1, concat = true) => {
+const scrapeCollectionPagesAndDownloadMeta = async (noOfPages, startPage = 1, concat = false) => {
+	if (!fs.existsSync(DATA_FOLDER)) {
+		fs.mkdirSync(DATA_FOLDER);
+	}
+
 	const oldWallsMeta = concat && fs.existsSync(META_PATH)
 		? JSON.parse(fs.readFileSync(META_PATH) || [])
 		: [];
@@ -77,44 +78,35 @@ const scrapeCollectionPagesAndDownloadMeta = async (noOfPages, startPage = 1, co
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta));
 };
 
-const downloadWalls = async (noOfWalls, startWall = 1, downloadMeta = false) => {
-	if (downloadMeta) {
-		// TODO: Replace the magic number with a constant
-		await scrapeCollectionPagesAndDownloadMeta(51);
+const downloadWalls = async () => {
+	if (!fs.existsSync(META_PATH)) {
+		await scrapeCollectionPagesAndDownloadMeta(TOTAL_COLLECTION_PAGES);
 	}
 	
 	const wallsData = JSON.parse(fs.readFileSync(META_PATH));
-	console.log("Total downloads to be done:", wallsData.length);
-	
-	const zeroIdx = startWall - 1;
-	for (let i = zeroIdx; i < zeroIdx + noOfWalls; i++) {
-		const wall = wallsData[i];
-		const dest = getWallPath(wall.wallFileName);
-		const options = {
-			url: wall.probWallURL,
-			dest
-		};
+	const noOfWalls = wallsData.length;
 
-		fs.access(dest, fs.F_OK, (err) => {
-			if (!err) { // File exists
-				return;
-			}
+	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
+		fs.mkdirSync(DOWNLOADS_FOLDER);
+	}
+	
+	console.log(`${wallsData.length} wallpaper(s) available...`);
+	console.log(`${fs.readdirSync(DOWNLOADS_FOLDER).length} wallpaper(s) have been downloaded...`)
+	
+	for (let i = 0; i < noOfWalls; i++) {
+		const wall = wallsData[i];
+		const wallPath = getWallPath(wall.wallFileName);
+
+		if (!fs.existsSync(wallPath)) {
+			const options = { url: wall.probWallURL, dest: wallPath };
 			download
 				.image(options)
 				.then(({ filename, image }) => {
 					console.log(i, "Saved to", filename);
 				})
 				.catch(err => console.error(err));
-		});
+		}
 	}
 }
 
-if (!fs.existsSync(DATA_FOLDER)){
-	fs.mkdirSync(DATA_FOLDER);
-	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
-		fs.mkdirSync(DOWNLOADS_FOLDER);
-	}
-}
-
-// TODO: Replace the magic number with a constant
-downloadWalls(1413, 1, true);
+downloadWalls();
