@@ -4,8 +4,8 @@
 	"description": "A simple scraper for downloading all the chic wallpapers from http://simpledesktops.com",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "node index.js"
+		"start": "node index.js",
+		"start:update": "cross-env SIMPLE_DESKTOPS_CHECK_FOR_UPDATES=true node index.js"
 	},
 	"keywords": [],
 	"author": "Sai Kishore Komanduri <saikishore.bits@gmail.com>",
@@ -17,6 +17,7 @@
 	"dependencies": {
 		"axios": "^0.21.1",
 		"cheerio": "^1.0.0-rc.3",
+		"cross-env": "^7.0.3",
 		"image-downloader": "^3.5.0",
 		"sanitize-filename": "^1.6.3"
 	}

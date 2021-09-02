@@ -1,13 +1,14 @@
 const path = require('path');
 
 const { BASE_URL } = require('./constants.js');
-const { DOWNLOADS_FOLDER } = process.env;
+const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
 
 const getNthPageURL = (n) => `${BASE_URL}/browse/${n}/`;
 
 const getWallFilename = (wallFilename, wallExt) => `${wallFilename}${wallExt?.toLowerCase() || '.png'}`;
 
-const getWallPath = (wallFilename, wallExt) => path.join(DOWNLOADS_FOLDER, getWallFilename(wallFilename, wallExt));
+const getWallPath = (wallFilename, wallExt) =>
+	path.join(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER, getWallFilename(wallFilename, wallExt));
 
 const getWallFilenamesFromMeta = (walls) => walls.map((wall) => getWallFilename(wall.wallFilename, wall.wallExt));
 

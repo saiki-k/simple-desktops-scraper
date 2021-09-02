@@ -12,7 +12,7 @@ const {
 	sortWallsByTimestamp,
 } = require('./utils.js');
 const { BASE_URL, MAX_COLLECTION_PAGES, DATA_FOLDER, META_PATH } = require('./constants.js');
-const { DOWNLOADS_FOLDER } = process.env;
+const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
 
 let totalScrapedBytes = 0;
 
@@ -143,7 +143,10 @@ const scrapeCollectionPagesForMeta = async (noOfPages) => {
 };
 
 const downloadWalls = async () => {
-	if (!fs.existsSync(META_PATH) || process.env.CHECK_FOR_UPDATES) {
+	if (
+		!fs.existsSync(META_PATH) ||
+		(process.env.SIMPLE_DESKTOPS_CHECK_FOR_UPDATES && process.env.SIMPLE_DESKTOPS_CHECK_FOR_UPDATES !== 'false')
+	) {
 		await scrapeCollectionPagesForMeta(MAX_COLLECTION_PAGES);
 	}
 
@@ -152,12 +155,12 @@ const downloadWalls = async () => {
 	const wallFilenames = getWallFilenamesFromMeta(walls);
 	const noOfWalls = new Set(wallFilenames).size;
 
-	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
-		fs.mkdirSync(DOWNLOADS_FOLDER);
+	if (!fs.existsSync(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER)) {
+		fs.mkdirSync(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER);
 	}
 
 	const downloadedNoOfWalls = (() => {
-		const downloadsFolderFiles = fs.readdirSync(DOWNLOADS_FOLDER);
+		const downloadsFolderFiles = fs.readdirSync(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER);
 		return (
 			downloadsFolderFiles.length -
 			downloadsFolderFiles.filter((filename) => !wallFilenames.includes(filename)).length

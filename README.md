@@ -17,11 +17,11 @@ npm install
 npm run start
 ```
 
--   The wallpapers are downloaded to the folder `./data/simple_desktops`.
+-   The wallpapers are downloaded (by default) to the folder `./data/simple_desktops`.
 
 -   You can run `npm run start` as many times as you wish (either in case of errors, or downloads that stop midway). Wallpapers which have already been downloaded, won't be downloaded again.
 
--   You can also periodically run `npm run start` to check for new wallpaper updates (and download them).
+-   You can also periodically run `npm run start:update` to check for new wallpaper updates (and download them).
 
 ## Please...
 
