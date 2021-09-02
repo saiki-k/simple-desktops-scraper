@@ -2,25 +2,22 @@ const path = require('path');
 
 const { BASE_URL, DOWNLOADS_FOLDER } = require('./constants.js');
 
-const getNthPageURL = n => `${BASE_URL}/browse/${n}/`;
-const getWallPath = (fileName, wallExt) => path.join(
-	DOWNLOADS_FOLDER,
-	`${fileName}${wallExt ? wallExt.toLowerCase() : '.png'}`
-);
+const getNthPageURL = (n) => `${BASE_URL}/browse/${n}/`;
+const getWallPath = (fileName, wallExt) =>
+	path.join(DOWNLOADS_FOLDER, `${fileName}${wallExt ? wallExt.toLowerCase() : '.png'}`);
 
-const getDateObjFromTimestamp = timestamp => {
+const getDateObjFromTimestamp = (timestamp) => {
 	const [year, month, day] = timestamp.split('-');
-	return new Date(
-		parseInt(year, 10), parseInt(month, 10), parseInt(day, 10)
-	);
+	return new Date(parseInt(year, 10), parseInt(month, 10), parseInt(day, 10));
 };
 const sortWallsByTimestamp = (wallA, wallB) =>
 	getDateObjFromTimestamp(wallB.timestamp) - getDateObjFromTimestamp(wallA.timestamp);
 
-const reflectPromise = p => p.then(
-	val => ({ val, status: "fulfilled" }),
-	err => ({ err, status: "rejected" })
-);
+const reflectPromise = (p) =>
+	p.then(
+		(val) => ({ val, status: 'fulfilled' }),
+		(err) => ({ err, status: 'rejected' })
+	);
 
 module.exports = {
 	getNthPageURL,

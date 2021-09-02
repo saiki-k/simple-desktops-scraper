@@ -1,6 +1,6 @@
 const path = require('path');
 
-const BASE_URL = "http://simpledesktops.com";
+const BASE_URL = 'http://simpledesktops.com';
 
 const DATA_FOLDER = path.join('data');
 const META_PATH = path.join(DATA_FOLDER, 'meta.json');
@@ -13,5 +13,5 @@ module.exports = {
 	MAX_COLLECTION_PAGES,
 	DATA_FOLDER,
 	DOWNLOADS_FOLDER,
-	META_PATH
+	META_PATH,
 };
