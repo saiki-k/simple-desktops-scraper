@@ -2,5 +2,5 @@
 
 node_modules
 
-# data*/
+data*/
 env.js
