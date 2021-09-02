@@ -7,11 +7,14 @@ const download = require('image-downloader');
 const {
 	getNthPageURL,
 	getWallPath,
-	getDateObjFromTimestamp,
+	getWallFilename,
+	getWallFilenamesFromMeta,
 	sortWallsByTimestamp,
-	reflectPromise,
 } = require('./utils.js');
-const { BASE_URL, MAX_COLLECTION_PAGES, DATA_FOLDER, DOWNLOADS_FOLDER, META_PATH } = require('./constants.js');
+const { BASE_URL, MAX_COLLECTION_PAGES, DATA_FOLDER, META_PATH } = require('./constants.js');
+const { DOWNLOADS_FOLDER } = process.env;
+
+let totalScrapedBytes = 0;
 
 const scrapeCollectionPage = async (pageNo) => {
 	const pageURL = getNthPageURL(pageNo);
@@ -19,9 +22,17 @@ const scrapeCollectionPage = async (pageNo) => {
 	try {
 		response = await axios(pageURL);
 	} catch (e) {
-		console.log(`Error while scraping page ${pageNo}...\n`);
-		throw e;
+		console.error(`Error while scraping page ${pageNo}.\n`);
+		if (e.response?.status === 404) {
+			throw 'PAGE_NOT_FOUND';
+		}
+		return [];
 	}
+
+	const scrapedBytes = Buffer.byteLength(response.data);
+	totalScrapedBytes += scrapedBytes;
+	console.log(`Scraped ${scrapedBytes} bytes.`);
+
 	const html = response.data;
 
 	const $ = cheerio.load(html);
@@ -83,62 +94,42 @@ const scrapeCollectionPage = async (pageNo) => {
 	return walls.sort(sortWallsByTimestamp);
 };
 
-const scrapeCollectionPagesAndDownloadMeta = async (noOfPages) => {
+const scrapeCollectionPagesForMeta = async (noOfPages) => {
 	if (!fs.existsSync(DATA_FOLDER)) {
 		fs.mkdirSync(DATA_FOLDER);
 	}
 
-	const pagePromises = [];
-	for (let i = 1; i <= noOfPages; i++) {
-		pagePromises.push(reflectPromise(scrapeCollectionPage(i)));
-	}
-
-	let wallsArr = [];
-	try {
-		wallsArr = await Promise.all(pagePromises);
-	} catch (e) {
-		console.error(e);
-	}
-
-	const walls = wallsArr
-		.reduce((acc, curr) => (curr.val ? acc.concat(curr.val) : acc), [])
-		.sort(sortWallsByTimestamp);
-	const wallsMeta = { latest: walls[0].timestamp, walls };
-	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
-};
-
-const scrapeCollectionPagesAndUpdateMeta = async (noOfPages) => {
-	let wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
+	let wallsMeta = !fs.existsSync(META_PATH) ? { walls: [] } : JSON.parse(fs.readFileSync(META_PATH));
 	let { walls } = wallsMeta;
-	console.log('Checking for updates...');
+	const existingWallFilenames = getWallFilenamesFromMeta(walls);
+
+	console.log('Checking for updates...\n');
 	let newWalls = [];
 	for (let i = 1; i <= noOfPages; i++) {
+		console.log(`Scraping page ${i}...`);
+
 		let pageWalls = [];
 		try {
-			console.log(`Scraping page ${i}...\n`);
 			pageWalls = await scrapeCollectionPage(i);
-		} catch (e) {
-			console.error(`Error while scraping page ${i}...\n`, e);
+		} catch (error) {
+			console.log({ error });
+			if (error === 'PAGE_NOT_FOUND') {
+				break;
+			}
 		}
-		const filteredPageWalls = pageWalls.filter((wall) => {
-			const wallDateObj = getDateObjFromTimestamp(wall.timestamp);
-			const wallsMetaLatestDateObj = getDateObjFromTimestamp(wallsMeta.latest);
 
-			return (
-				wallDateObj > wallsMetaLatestDateObj ||
-				(wallDateObj.getTime() === wallsMetaLatestDateObj.getTime() &&
-					!fs.existsSync(getWallPath(wall.wallFilename, wall.wallExt)))
-			);
-		});
-		newWalls = newWalls.concat(filteredPageWalls);
-		if (filteredPageWalls.length < pageWalls.length) {
-			// Only some latest walls in this page
-			console.log(
-				`Stopping update check on page ${i} as only ${filteredPageWalls.length} out of ${pageWalls.length} wallpapers are new...\n`
-			);
-			break;
+		if (!pageWalls?.length) {
+			continue;
 		}
+
+		const filteredPageWalls = pageWalls.filter(
+			(wall) => !existingWallFilenames.includes(getWallFilename(wall.wallFilename, wall.wallExt))
+		);
+		newWalls = newWalls.concat(filteredPageWalls);
+		console.log(`Found ${filteredPageWalls.length} new wallpapers (that were not in meta), on page ${i}.\n`);
 	}
+
+	console.log(`\nTotal scraped bytes: ${totalScrapedBytes}`, `(${totalScrapedBytes / 1000000} MB)\n`);
 
 	if (newWalls.length === 0) {
 		return;
@@ -148,28 +139,31 @@ const scrapeCollectionPagesAndUpdateMeta = async (noOfPages) => {
 	wallsMeta = { latest: walls[0].timestamp, walls };
 
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
+	console.log(`Updated meta with the data from ${newWalls.length} new walls.`);
 };
 
 const downloadWalls = async (opts) => {
-	try {
-		if (!fs.existsSync(META_PATH)) {
-			await scrapeCollectionPagesAndDownloadMeta(MAX_COLLECTION_PAGES);
-		} else if (opts.checkForUpdates) {
-			await scrapeCollectionPagesAndUpdateMeta(MAX_COLLECTION_PAGES);
-		}
-	} catch (e) {
-		console.error(e);
+	if (!fs.existsSync(META_PATH) || opts.checkForUpdates) {
+		await scrapeCollectionPagesForMeta(MAX_COLLECTION_PAGES);
 	}
 
 	const wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
 	const { walls } = wallsMeta;
-	const noOfWalls = walls.length;
+	const wallFilenames = getWallFilenamesFromMeta(walls);
+	const noOfWalls = new Set(wallFilenames).size;
 
 	if (!fs.existsSync(DOWNLOADS_FOLDER)) {
 		fs.mkdirSync(DOWNLOADS_FOLDER);
 	}
 
-	const downloadedNoOfWalls = fs.readdirSync(DOWNLOADS_FOLDER).length;
+	const downloadedNoOfWalls = (() => {
+		const downloadsFolderFiles = fs.readdirSync(DOWNLOADS_FOLDER);
+		return (
+			downloadsFolderFiles.length -
+			downloadsFolderFiles.filter((filename) => !wallFilenames.includes(filename)).length
+		);
+	})();
+
 	const remainingNoOfDownloads = noOfWalls - downloadedNoOfWalls;
 	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have been downloaded.`);
 	if (remainingNoOfDownloads >= 1) {
