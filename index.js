@@ -8,4 +8,4 @@ require('./env.js');
 
 const { downloadWalls } = require('./src/scrapers.js');
 
-downloadWalls({ checkForUpdates: false });
+downloadWalls();

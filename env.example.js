@@ -1,4 +1,6 @@
 const path = require('path');
-const DOWNLOADS_FOLDER = path.join('.', 'data/simple_desktops');
 
-process.env = { DOWNLOADS_FOLDER };
+process.env = {
+	DOWNLOADS_FOLDER: path.join('.', 'data/simple_desktops'),
+	CHECK_FOR_UPDATES: false,
+};

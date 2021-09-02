@@ -142,8 +142,8 @@ const scrapeCollectionPagesForMeta = async (noOfPages) => {
 	console.log(`Updated meta with the data from ${newWalls.length} new walls.`);
 };
 
-const downloadWalls = async (opts) => {
-	if (!fs.existsSync(META_PATH) || opts.checkForUpdates) {
+const downloadWalls = async () => {
+	if (!fs.existsSync(META_PATH) || process.env.CHECK_FOR_UPDATES) {
 		await scrapeCollectionPagesForMeta(MAX_COLLECTION_PAGES);
 	}
 
