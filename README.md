@@ -29,4 +29,4 @@ Be a good netizen, and do use the scraped data for absolutely-personal purposes 
 
 ## Credit where credit's due...
 
-Thanks to [Nikhil Astakala](https://github.com/nikhilastakala) for getting visibly bummed out, every now and then.
+Thanks to [Nikhil Astakala](https://github.com/nikhilism15) for getting visibly bummed out, every now and then.
