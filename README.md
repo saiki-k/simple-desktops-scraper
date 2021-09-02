@@ -10,6 +10,13 @@ Hence, this scraper.
 
 -   Please ensure that NodeJS is installed on your computer.
 
+-   Clone this repository, and change directory to the 'simple-desktops-scraper' folder.
+
+```
+git clone --depth 1 https://github.com/fatman-/simple-desktops-scraper
+cd simple-desktops-scraper
+```
+
 -   Run the following commands to start downloading the wallpapers.
 
 ```
