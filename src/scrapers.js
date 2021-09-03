@@ -136,18 +136,20 @@ const scrapeCollectionPagesForMeta = async () => {
 		if (filteredPageWalls.length < pageWalls.length) {
 			console.log(
 				`\n${
-					!filteredPageWalls.length ? 'None of the' : `Only ${filteredPageWalls.length}`
-				} wallpapers out of the ${pageWalls.length} wallpapers on page ${pageIdx}, are new (not in meta).`
+					!filteredPageWalls.length
+						? 'None of the'
+						: `Only ${filteredPageWalls.length} wallpaper(s) out of the ${pageWalls.length}`
+				} wallpaper(s) on page ${pageIdx}, ${filteredPageWalls.length === 1 ? 'is' : 'are'} new (not in meta).`
 			);
 			console.log(
 				'In all likeliness this means that there would not be any new wallpapers in the pages further.'
 			);
-			const choice = await prompter.prompt(`Please press "y" to continue, and "n" to stop scraping.`, ['y', 'n']);
-			if (choice === 'n') {
-				break;
-			}
+			const choice = await prompter.prompt(
+				`\nYou should press "y" to stop scraping. Press "n" to continue scraping.`,
+				['y', 'n']
+			);
 			if (choice === 'y') {
-				continue;
+				break;
 			}
 		} else {
 			console.log(
@@ -198,7 +200,7 @@ const downloadWalls = async () => {
 	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have already been downloaded.`);
 
 	if (remainingNoOfDownloads >= 1) {
-		console.log(`Downloading the remaining ${remainingNoOfDownloads} wallpapers, now...\n`);
+		console.log(`Downloading the remaining ${remainingNoOfDownloads} wallpaper(s), now...\n`);
 		for (let i = 0; i < noOfWalls; i++) {
 			const wall = walls[i];
 			if (wall) {
