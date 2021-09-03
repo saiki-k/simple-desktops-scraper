@@ -20,18 +20,10 @@ const getDateObjFromTimestamp = (timestamp) => {
 const sortWallsByTimestamp = (wallA, wallB) =>
 	getDateObjFromTimestamp(wallB.timestamp) - getDateObjFromTimestamp(wallA.timestamp);
 
-const reflectPromise = (p) =>
-	p.then(
-		(val) => ({ val, status: 'fulfilled' }),
-		(err) => ({ err, status: 'rejected' })
-	);
-
 module.exports = {
 	getNthPageURL,
 	getWallFilename,
 	getWallPath,
 	getWallFilenamesFromMeta,
-	getDateObjFromTimestamp,
 	sortWallsByTimestamp,
-	reflectPromise,
 };

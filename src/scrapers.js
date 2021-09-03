@@ -3,6 +3,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const sanitize = require('sanitize-filename');
 const download = require('image-downloader');
+const prompter = require('keypress-prompt');
 
 const {
 	getNthPageURL,
@@ -11,7 +12,7 @@ const {
 	getWallFilenamesFromMeta,
 	sortWallsByTimestamp,
 } = require('./utils.js');
-const { BASE_URL, MAX_COLLECTION_PAGES, DATA_FOLDER, META_PATH } = require('./constants.js');
+const { BASE_URL, DATA_FOLDER, META_PATH } = require('./constants.js');
 const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
 
 let totalScrapedBytes = 0;
@@ -22,9 +23,11 @@ const scrapeCollectionPage = async (pageNo) => {
 	try {
 		response = await axios(pageURL);
 	} catch (e) {
-		console.error(`Error while scraping page ${pageNo}.\n`);
+		console.error(`Error while scraping page ${pageNo}.`);
 		if (e.response?.status === 404) {
 			throw 'PAGE_NOT_FOUND';
+		} else {
+			console.error(`\n\nERROR: ${e}\n\n`);
 		}
 		return [];
 	}
@@ -42,7 +45,7 @@ const scrapeCollectionPage = async (pageNo) => {
 
 	$('div.desktop')
 		.contents()
-		.each((idx, ele) => {
+		.each((_, ele) => {
 			const html = $(ele).html();
 			if (html) {
 				if (ele.name === 'a') {
@@ -94,7 +97,7 @@ const scrapeCollectionPage = async (pageNo) => {
 	return walls.sort(sortWallsByTimestamp);
 };
 
-const scrapeCollectionPagesForMeta = async (noOfPages) => {
+const scrapeCollectionPagesForMeta = async () => {
 	if (!fs.existsSync(DATA_FOLDER)) {
 		fs.mkdirSync(DATA_FOLDER);
 	}
@@ -103,18 +106,21 @@ const scrapeCollectionPagesForMeta = async (noOfPages) => {
 	let { walls } = wallsMeta;
 	const existingWallFilenames = getWallFilenamesFromMeta(walls);
 
-	console.log('Checking for updates...\n');
-	let newWalls = [];
-	for (let i = 1; i <= noOfPages; i++) {
-		console.log(`Scraping page ${i}...`);
+	console.log('\nChecking for updates...');
+	let newWalls = [],
+		PAGE_NOT_FOUND = false,
+		pageIdx = 0;
+	while (!PAGE_NOT_FOUND) {
+		pageIdx += 1;
+		console.log(`\nScraping page ${pageIdx}...`);
 
 		let pageWalls = [];
 		try {
-			pageWalls = await scrapeCollectionPage(i);
+			pageWalls = await scrapeCollectionPage(pageIdx);
 		} catch (error) {
 			console.log({ error });
 			if (error === 'PAGE_NOT_FOUND') {
-				break;
+				PAGE_NOT_FOUND = true;
 			}
 		}
 
@@ -126,10 +132,31 @@ const scrapeCollectionPagesForMeta = async (noOfPages) => {
 			(wall) => !existingWallFilenames.includes(getWallFilename(wall.wallFilename, wall.wallExt))
 		);
 		newWalls = newWalls.concat(filteredPageWalls);
-		console.log(`Found ${filteredPageWalls.length} new wallpapers (that were not in meta), on page ${i}.\n`);
+
+		if (filteredPageWalls.length < pageWalls.length) {
+			console.log(
+				`\n${
+					!filteredPageWalls.length ? 'None of the' : `Only ${filteredPageWalls.length}`
+				} wallpapers out of the ${pageWalls.length} wallpapers on page ${pageIdx}, are new (not in meta).`
+			);
+			console.log(
+				'In all likeliness this means that there would not be any new wallpapers in the pages further.'
+			);
+			const choice = await prompter.prompt(`Please press "y" to continue, and "n" to stop scraping.`, ['y', 'n']);
+			if (choice === 'n') {
+				break;
+			}
+			if (choice === 'y') {
+				continue;
+			}
+		} else {
+			console.log(
+				`Found ${filteredPageWalls.length} new wallpapers (that were not in meta), on page ${pageIdx}.\n`
+			);
+		}
 	}
 
-	console.log(`\nTotal scraped bytes: ${totalScrapedBytes}`, `(${totalScrapedBytes / 1000000} MB)\n`);
+	console.log(`\nTotal scraped bytes: ${totalScrapedBytes}`, `(${totalScrapedBytes / (1024 * 1024)} MB)\n`);
 
 	if (newWalls.length === 0) {
 		return;
@@ -147,7 +174,7 @@ const downloadWalls = async () => {
 		!fs.existsSync(META_PATH) ||
 		(process.env.SIMPLE_DESKTOPS_CHECK_FOR_UPDATES && process.env.SIMPLE_DESKTOPS_CHECK_FOR_UPDATES !== 'false')
 	) {
-		await scrapeCollectionPagesForMeta(MAX_COLLECTION_PAGES);
+		await scrapeCollectionPagesForMeta();
 	}
 
 	const wallsMeta = JSON.parse(fs.readFileSync(META_PATH));
@@ -168,24 +195,24 @@ const downloadWalls = async () => {
 	})();
 
 	const remainingNoOfDownloads = noOfWalls - downloadedNoOfWalls;
-	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have been downloaded.`);
+	console.log(`${downloadedNoOfWalls} out of the available ${noOfWalls} wallpaper(s) have already been downloaded.`);
+
 	if (remainingNoOfDownloads >= 1) {
-		console.log(`Downloading the remaining ${remainingNoOfDownloads}...\n`);
-	}
+		console.log(`Downloading the remaining ${remainingNoOfDownloads} wallpapers, now...\n`);
+		for (let i = 0; i < noOfWalls; i++) {
+			const wall = walls[i];
+			if (wall) {
+				const wallPath = getWallPath(wall.wallFilename, wall.wallExt);
 
-	for (let i = 0; i < noOfWalls; i++) {
-		const wall = walls[i];
-		if (wall) {
-			const wallPath = getWallPath(wall.wallFilename, wall.wallExt);
-
-			if (!fs.existsSync(wallPath)) {
-				const options = { url: wall.probWallURL, dest: wallPath };
-				download
-					.image(options)
-					.then(({ filename, image }) => {
-						console.log('Saved to', filename);
-					})
-					.catch((err) => console.error(err));
+				if (!fs.existsSync(wallPath)) {
+					const options = { url: wall.probWallURL, dest: wallPath };
+					download
+						.image(options)
+						.then(({ filename, image }) => {
+							console.log('Saved to', filename);
+						})
+						.catch((err) => console.error(err));
+				}
 			}
 		}
 	}
