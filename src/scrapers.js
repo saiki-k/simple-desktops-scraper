@@ -109,6 +109,7 @@ const scrapeCollectionPagesForMeta = async () => {
 	console.log('\nChecking for updates...');
 	let newWalls = [],
 		PAGE_NOT_FOUND = false,
+		UNNECESSARY_CONTINUE_PROMPT = true,
 		pageIdx = 0;
 	while (!PAGE_NOT_FOUND) {
 		pageIdx += 1;
@@ -144,12 +145,17 @@ const scrapeCollectionPagesForMeta = async () => {
 			console.log(
 				'In all likeliness this means that there would not be any new wallpapers in the pages further.'
 			);
-			const choice = await prompter.prompt(
-				`\nYou should press "y" to stop scraping. Press "n" to continue scraping.`,
-				['y', 'n']
-			);
-			if (choice === 'y') {
-				break;
+			if (UNNECESSARY_CONTINUE_PROMPT) {
+				const choice = await prompter.prompt(
+					`\nYou should press "y" to stop scraping. Press "n", or "s" (skip all prompts) to continue scraping.`,
+					['y', 'n', 's']
+				);
+				if (choice === 'y') {
+					break;
+				}
+				if (choice === 's') {
+					UNNECESSARY_CONTINUE_PROMPT = false;
+				}
 			}
 		} else {
 			console.log(
