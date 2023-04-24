@@ -10,7 +10,7 @@ const {
 	getWallPath,
 	getWallFilename,
 	getWallFilenamesFromMeta,
-	sortWallsByTimestamp,
+	sortWallsByUploadDate,
 } = require('./utils.js');
 const { BASE_URL, DATA_FOLDER, META_PATH } = require('./constants.js');
 const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
@@ -65,7 +65,7 @@ const scrapeCollectionPage = async (pageNo) => {
 					const wallURLParts = probWallURL.split('/');
 
 					// YYYY-MM-DD
-					const timestamp = `${wallURLParts[5]}-${wallURLParts[6]}-${wallURLParts[7]}`;
+					const wallUploadDate = `${wallURLParts[5]}-${wallURLParts[6]}-${wallURLParts[7]}`;
 					const wallOriginalFilename = wallURLParts[8];
 
 					const wallOriginalFilenameParts = wallOriginalFilename.split('.');
@@ -75,13 +75,13 @@ const scrapeCollectionPage = async (pageNo) => {
 
 					wallObj = {
 						wallPageURL,
-						timestamp,
+						wallUploadDate,
 						thumbURL,
 						probWallURL,
 						wallTitle,
+						sanitizedWallTitle: sanitize(wallTitle),
 						wallOriginalFilename,
 						wallExt,
-						wallFilename: `${timestamp} - ${sanitize(wallTitle)}`,
 					};
 				}
 				if (ele.name === 'span') {
@@ -94,7 +94,7 @@ const scrapeCollectionPage = async (pageNo) => {
 			}
 		});
 
-	return walls.sort(sortWallsByTimestamp);
+	return walls.sort(sortWallsByUploadDate);
 };
 
 const scrapeCollectionPagesForMeta = async () => {
@@ -130,7 +130,7 @@ const scrapeCollectionPagesForMeta = async () => {
 		}
 
 		const filteredPageWalls = pageWalls.filter(
-			(wall) => !existingWallFilenames.includes(getWallFilename(wall.wallFilename, wall.wallExt))
+			(wall) => !existingWallFilenames.includes(getWallFilename(wall))
 		);
 		newWalls = newWalls.concat(filteredPageWalls);
 
@@ -170,8 +170,8 @@ const scrapeCollectionPagesForMeta = async () => {
 		return;
 	}
 
-	walls = newWalls.concat(walls).sort(sortWallsByTimestamp);
-	wallsMeta = { latest: walls[0].timestamp, walls };
+	walls = newWalls.concat(walls).sort(sortWallsByUploadDate);
+	wallsMeta = { latest: walls[0].wallUploadDate, walls };
 
 	fs.writeFileSync(META_PATH, JSON.stringify(wallsMeta, null, '\t'));
 	console.log(`Updated meta with the data from ${newWalls.length} new walls.`);
@@ -210,7 +210,7 @@ const downloadWalls = async () => {
 		for (let i = 0; i < noOfWalls; i++) {
 			const wall = walls[i];
 			if (wall) {
-				const wallPath = getWallPath(wall.wallFilename, wall.wallExt);
+				const wallPath = getWallPath(wall);
 
 				if (!fs.existsSync(wallPath)) {
 					const options = { url: wall.probWallURL, dest: wallPath };

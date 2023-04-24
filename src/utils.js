@@ -5,25 +5,28 @@ const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
 
 const getNthPageURL = (n) => `${BASE_URL}/browse/${n}/`;
 
-const getWallFilename = (wallFilename, wallExt) => `${wallFilename}${wallExt?.toLowerCase() || '.png'}`;
+const getWallFilename = (wall, options = { includeDateInFilename: false }) => {
+	const wallFilename = options.includeDateInFilename ? `${wall.wallUploadDate} - ${wall.sanitizedWallTitle}`: wall.sanitizedWallTitle;
+	return `${wallFilename}${wall.wallExt?.toLowerCase() || '.png'}`;
+}
 
-const getWallPath = (wallFilename, wallExt) =>
-	path.join(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER, getWallFilename(wallFilename, wallExt));
+const getWallPath = (wall) =>
+	path.join(SIMPLE_DESKTOPS_DOWNLOADS_FOLDER, getWallFilename(wall));
 
-const getWallFilenamesFromMeta = (walls) => walls.map((wall) => getWallFilename(wall.wallFilename, wall.wallExt));
+const getWallFilenamesFromMeta = (walls) => walls.map((wall) => getWallFilename(wall));
 
-const getDateObjFromTimestamp = (timestamp) => {
-	const [year, month, day] = timestamp.split('-');
+const getDateObjFromUploadDateStr = (uploadDateStr) => {
+	const [year, month, day] = uploadDateStr.split('-');
 	return new Date(parseInt(year, 10), parseInt(month, 10), parseInt(day, 10));
 };
 
-const sortWallsByTimestamp = (wallA, wallB) =>
-	getDateObjFromTimestamp(wallB.timestamp) - getDateObjFromTimestamp(wallA.timestamp);
+const sortWallsByUploadDate = (wallA, wallB) =>
+	getDateObjFromUploadDateStr(wallB.wallUploadDate) - getDateObjFromUploadDateStr(wallA.wallUploadDate);
 
 module.exports = {
 	getNthPageURL,
 	getWallFilename,
 	getWallPath,
 	getWallFilenamesFromMeta,
-	sortWallsByTimestamp,
+	sortWallsByUploadDate,
 };
