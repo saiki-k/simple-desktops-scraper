@@ -18,7 +18,7 @@
 		"axios": "^0.21.2",
 		"cheerio": "^1.0.0-rc.3",
 		"cross-env": "^7.0.3",
-		"image-downloader": "^3.5.0",
+		"image-downloader": "^4.3.0",
 		"keypress-prompt": "^0.3.2",
 		"sanitize-filename": "^1.6.3"
 	}
