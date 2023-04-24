@@ -69,9 +69,9 @@ const scrapeCollectionPage = async (pageNo) => {
 					const wallOriginalFilename = wallURLParts[8];
 
 					const wallOriginalFilenameParts = wallOriginalFilename.split('.');
-					const isExtPresent = wallOriginalFilenameParts.length > 1;
-
-					const wallExt = isExtPresent ? '.' + wallOriginalFilenameParts.pop() : '';
+					const lastPart = wallOriginalFilenameParts[wallOriginalFilenameParts.length - 1];
+					const isLastPartAnExt = /\.(jpg|jpeg|png|gif)$/i.test(lastPart)
+					const wallExt = isLastPartAnExt ? `.${wallOriginalFilenameParts.pop()}` : '';
 
 					wallObj = {
 						wallPageURL,
@@ -80,7 +80,7 @@ const scrapeCollectionPage = async (pageNo) => {
 						probWallURL,
 						wallTitle,
 						sanitizedWallTitle: sanitize(wallTitle),
-						wallOriginalFilename,
+						wallOriginalFilename: wallOriginalFilenameParts.join('.'),
 						wallExt,
 					};
 				}

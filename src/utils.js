@@ -5,8 +5,10 @@ const { SIMPLE_DESKTOPS_DOWNLOADS_FOLDER } = process.env;
 
 const getNthPageURL = (n) => `${BASE_URL}/browse/${n}/`;
 
-const getWallFilename = (wall, options = { includeDateInFilename: false }) => {
-	const wallFilename = options.includeDateInFilename ? `${wall.wallUploadDate} - ${wall.sanitizedWallTitle}`: wall.sanitizedWallTitle;
+const getWallFilename = (wall, options = { includeDateInFilename: true }) => {
+	let wallFilename = wall.sanitizedWallTitle || wall.wallOriginalFilename;
+	wallFilename = options.includeDateInFilename ? `${wall.wallUploadDate} · ${wallFilename}`: wallFilename;
+
 	return `${wallFilename}${wall.wallExt?.toLowerCase() || '.png'}`;
 }
 
