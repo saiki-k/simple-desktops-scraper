@@ -13,7 +13,7 @@ Hence, this scraper.
 -   Clone this repository, and change directory to the `simple-desktops-scraper` folder.
 
 ```
-git clone --depth 1 https://github.com/fatman-/simple-desktops-scraper
+git clone --depth 1 https://github.com/saiki-k/simple-desktops-scraper
 cd simple-desktops-scraper
 ```
 
